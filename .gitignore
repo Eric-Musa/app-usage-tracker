@@ -1,3 +1,6 @@
+src/local/
+*.db
+
 # Ignore user-specific categorized processes
 src/app_usage_tracker/categories/categorized_processes.json
 

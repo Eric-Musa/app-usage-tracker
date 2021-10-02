@@ -1,16 +1,40 @@
 import datetime
 import json
 import psutil
+
+# import random
 from .categories import categorize
 from .scheduling import DATETIME_FORMAT
 
 
-def proc_runtime(ts):
-    return datetime.datetime.now() - datetime.datetime.fromtimestamp(ts)
+def trim_datetime(dt):
+    return dt - datetime.timedelta(microseconds=dt.microsecond)
+
+
+# def bad_hash(a, b):
+#     random.seed(a)
+#     r1 = str(random.random())[:8]
+#     random.seed(b)
+#     r2 = str(random.random())[:8]
+#     return int(''.join(r1.split('.') + r2.split('.')))
+
+
+# def bad_hash(*seeds):
+#     max_sample = int(16 / len(seeds))
+#     hash = ''
+#     for seed in seeds:
+#         random.seed(seed)
+#         hash += str(random.random()).split('.')[1][:max_sample]
+#     return int(hash)
 
 
 def ctime(proc: psutil.Process):
-    return datetime.datetime.fromtimestamp(proc.create_time())
+    """
+    convert `Process` create_timestamp to datetime, ignoring microseconds
+    """
+    return trim_datetime(datetime.datetime.fromtimestamp(proc.create_time()))
+    # startup = datetime.datetime.fromtimestamp(proc.create_time())
+    # return startup - datetime.timedelta(microseconds=startup.microsecond)
 
 
 STILL_RUNNING = "running"
@@ -27,6 +51,7 @@ class Application:
             self.startup = startup
         else:
             self.startup = datetime.datetime.strptime(startup, DATETIME_FORMAT)
+        assert self.startup.microsecond == 0
 
         if (
             self._pids_alive()
