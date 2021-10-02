@@ -90,9 +90,11 @@ class Application:
             self.pids.append(proc.pid)
             self.startup = min(self.startup, ctime(proc))
 
-    def wall_time(self):
+    def walltime(self):
         return (
-            datetime.datetime.now() if self.is_alive() else self.shutdown
+            trim_datetime(datetime.datetime.now())
+            if self.is_alive()
+            else self.shutdown
         ) - self.startup
 
     def _pids_alive(self):
@@ -120,14 +122,15 @@ class Application:
     def serialize(self):
         return {
             "name": self.name,
-            "pids": self.pids,
-            "exe": self.exe,
+            "category": self.category,
             "startup": self.startup.strftime(DATETIME_FORMAT),
             "shutdown": (
                 datetime.datetime.now()
                 if self.shutdown == STILL_RUNNING
                 else self.shutdown
             ).strftime(DATETIME_FORMAT),
+            "pids": self.pids,
+            "exe": self.exe,
             "uid": self.exe + self.startup.strftime(DATETIME_FORMAT),
         }
 
@@ -172,7 +175,7 @@ class Application:
         s += f"{self.name} ("
         s += STILL_RUNNING if self.shutdown == STILL_RUNNING else STOPPED
         s += f") started at {self.startup.strftime(DATETIME_FORMAT)} "
-        s += f"(runtime: {str(self.wall_time()).split('.')[0]}) "
+        s += f"(runtime: {str(self.walltime()).split('.')[0]}) "
         s += f"({len(self.pids)} pids: {self._pids_str()})"
         return s
 
