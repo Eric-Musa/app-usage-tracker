@@ -3,8 +3,8 @@ import json
 import psutil
 
 # import random
-from .categories import categorize
-from .scheduling import DATETIME_FORMAT
+from categories import categorize
+from scheduling import DATETIME_FORMAT
 
 
 def trim_datetime(dt):

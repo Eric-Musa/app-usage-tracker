@@ -1,10 +1,12 @@
 import psutil
 import sqlite3
 from pathlib import Path
-from app_usage_tracker import (
-    Application,
+from application import Application
+from categories import (
     categorize,
     OTHER,
+)
+from scheduling import (
     get_daystamp,
     DATE_FORMAT,
 )
@@ -46,7 +48,7 @@ if __name__ == "__main__":
     # CONNECT TO DB
     daystamp = get_daystamp()
     db_path = (
-        Path.cwd().parent
+        Path.cwd().parent.parent
         / "data"
         / ("apps-on-%s_3.db" % daystamp.strftime(DATE_FORMAT))
     )
