@@ -19,7 +19,8 @@
  - DONE**how to treat separate executions and closings of applications? --> don't categorize applications by .exe, but by execution
  -
 
-# *2
+# *2 COMPLETE
  - **how to perform aggregations on application data**
- - calculate the walltime for each logged application execution, then:
-   - for each application name, sum together the walltimes
+ - DONE calculate the walltime for each logged application execution, then:
+   - DONE for each application name, sum together the walltimes
+     - (and then some)
