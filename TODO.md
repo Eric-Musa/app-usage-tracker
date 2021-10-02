@@ -1,7 +1,7 @@
 # Goals:
  - periodically query running processes and track the lifetimes of particular processes corresponding to applications
  - DONE categorize those particular processes (and corresponding applications) as work, leisure, common, or other
- - *1 *2 aggregate the wall time per day spent on work, leisure, or browser applications
+ - **\*1 \*2** aggregate the wall time per day spent on work, leisure, or browser applications
  - send out email notifications summarizing the aggregation
 
 # Solutions:
@@ -19,8 +19,13 @@
  - DONE**how to treat separate executions and closings of applications? --> don't categorize applications by .exe, but by execution
  -
 
-# *2 COMPLETE
+# *2 ~COMPLETE --> *3
  - **how to perform aggregations on application data**
  - DONE calculate the walltime for each logged application execution, then:
    - DONE for each application name, sum together the walltimes
      - (and then some)
+
+# *3
+ - **summary tells combined time of apps per category --> does not account for overlap!!!**
+ - jeez, how to account for overlap... possible within SQL? or require Python processing?
+ - **honestly, don't even really need the global summary, per app usage is fine**

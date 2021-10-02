@@ -12,12 +12,25 @@ from app_usage_tracker import (
 # from app_usage_tracker.application import bad_hash
 
 
+def create_table(db_con, table_name, columns, unique_columns):
+    columns = (
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        + " TEXT, ".join(columns)
+        + " TEXT"
+    )
+    for uc in unique_columns:
+        columns = columns.replace(uc, "%s UNIQUE" % uc)
+
+    db_con.cursor().execute(
+        f"""CREATE TABLE IF NOT EXISTS {table_name} ({columns})"""
+    )
+
+
 if __name__ == "__main__":
 
     # SCRAPE
     applications = {}
     exclude_other = True
-
     for proc in psutil.process_iter():
         try:
             name = proc.name()
@@ -30,124 +43,97 @@ if __name__ == "__main__":
         except psutil.AccessDenied as e:
             print(e)
 
-    # TEST
-    # app = applications["Code.exe"]
-    # app.save_to_json("code_exe.json")
-    # des = Application.load_from_json("code_exe.json")
-    # print(app == des)
-    # des2 = Application.load_from_json("old_code_exe.json")
-    # print(app == des2)
-
     # CONNECT TO DB
     daystamp = get_daystamp()
-    db_path = Path("apps-on-%s_2.db" % daystamp.strftime(DATE_FORMAT))
+    db_path = (
+        Path.cwd().parent
+        / "data"
+        / ("apps-on-%s_3.db" % daystamp.strftime(DATE_FORMAT))
+    )
 
-    DEBUG_DB = False
+    DEBUG_DB = True
     if DEBUG_DB:
         db_path.unlink(missing_ok=True)
 
     con = sqlite3.connect(db_path)
 
+    # DEFINE COLUMN NAMES
+    name = "name"
+    category = "category"
+    startup = "startup"
+    shutdown = "shutdown"
+    pids = "pids"
+    exe = "exe"
+    uid = "uid"
+    walltime = "walltime"
+    total_walltime = "'total walltime'"
+
     # UPDATE APPLICATION DATA
     application_table = "Applications"
-    application_keys = [
-        "name",
-        "category",
-        "startup",
-        "shutdown",
-        "pids",
-        "exe",
-        "uid",
+    app_columns = [
+        name,
+        category,
+        startup,
+        shutdown,
+        pids,
+        exe,
+        uid,
     ]
-    app_columns = (
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        + " TEXT, ".join(application_keys)
-        + " TEXT"
-    )
-    unique_app_keys = ["uid TEXT"]
-    for uk in unique_app_keys:
-        app_columns = app_columns.replace(uk, "%s UNIQUE" % uk)
-
-    con.cursor().execute(
-        f"""CREATE TABLE IF NOT EXISTS {application_table} ({app_columns})"""
-    )
+    unique_app_columns = ["uid TEXT"]
+    create_table(con, application_table, app_columns, unique_app_columns)
 
     values_template = "NULL, " + ", ".join(
-        ["?" for _ in range(len(application_keys))]
+        ["?" for _ in range(len(app_columns))]
     )
     con.cursor().executemany(
-        f"""insert or replace into {application_table} \
-            values ({values_template})""",
+        f"""
+        insert or replace into {application_table} values ({values_template})
+        """,
         list(app.as_db_record() for app in applications.values()),
     )
     con.commit()
 
     # UPDATE AGGREGATIONS TABLE
     aggregation_table = "Aggregations"
-    aggregation_keys = ["name", "category", "walltime"]
-    agg_columns = (
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        + " TEXT, ".join(aggregation_keys)
-        + " TEXT"
-    )
-    unique_agg_keys = ["name TEXT"]
-    for uk in unique_agg_keys:
-        agg_columns = agg_columns.replace(uk, "%s UNIQUE" % uk)
-
-    con.cursor().execute(
-        f"""CREATE TABLE IF NOT EXISTS {aggregation_table} ({agg_columns})"""
-    )
+    agg_columns = [name, category, walltime]
+    unique_agg_columns = [f"{name} TEXT"]
+    create_table(con, aggregation_table, agg_columns, unique_agg_columns)
 
     # perform aggregation
-    values_template = "NULL, " + ", ".join(
-        ["?" for _ in range(len(aggregation_keys))]
-    )
     con.cursor().execute(
         f"""
-    insert or replace into {aggregation_table} (name, category, walltime)
-    select
-    name, category, time(
-        sum(
-            (strftime('%s', shutdown) - strftime('%s', startup))
-        ), 'unixepoch') as "walltime"
-    from {application_table}
-    group by name
-    order by walltime desc
-    """
+        insert or replace into {aggregation_table}
+        ({name}, {category}, {walltime})
+        select
+        {name}, {category}, time(
+            sum(
+                (strftime('%s', {shutdown}) - strftime('%s', {startup}))
+            ), 'unixepoch') as "{walltime}"
+        from {application_table}
+        group by {name}
+        order by {walltime} desc
+        """
     )
     con.commit()
 
     # UPDATE SUMMARY TABLE
-    summary_table = "Summary"
-    summary_keys = ["category", "'total walltime'"]
-    sum_columns = (
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        + " TEXT, ".join(summary_keys)
-        + " TEXT"
-    )
-    unique_sum_keys = ["category TEXT"]
-    for uk in unique_sum_keys:
-        sum_columns = sum_columns.replace(uk, "%s UNIQUE" % uk)
+    # summary_table = "Summary"
+    # sum_columns = [category, total_walltime]
+    # unique_sum_columns = [f"{category} TEXT"]
+    # create_table(con, summary_table, sum_columns, unique_sum_columns)
 
-    con.cursor().execute(
-        f"""CREATE TABLE IF NOT EXISTS {summary_table} ({sum_columns})"""
-    )
-
-    # perform summary
-    values_template = "NULL, " + ", ".join(
-        ["?" for _ in range(len(summary_keys))]
-    )
-    con.cursor().execute(
-        f"""
-    insert or replace into {summary_table} (category, "total walltime")
-    select
-    category, time(
-        sum(
-            strftime('%s', walltime)
-            ), 'unixepoch') as "total walltime"
-    from {aggregation_table}
-    group by category
-    order by walltime desc
-    """
-    )
-    con.commit()
+    # # perform summary
+    # con.cursor().execute(
+    #     f"""
+    #     insert or replace into {summary_table} ({category}, {total_walltime})
+    #     select
+    #     {category}, time(
+    #         sum(
+    #             strftime('%s', {walltime})
+    #             ), 'unixepoch') as {total_walltime}
+    #     from {aggregation_table}
+    #     group by {category}
+    #     order by {walltime} desc
+    #     """
+    # )
+    # con.commit()
