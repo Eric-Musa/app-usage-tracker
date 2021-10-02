@@ -124,11 +124,9 @@ class Application:
             "name": self.name,
             "category": self.category,
             "startup": self.startup.strftime(DATETIME_FORMAT),
-            "shutdown": (
-                datetime.datetime.now()
-                if self.shutdown == STILL_RUNNING
-                else self.shutdown
-            ).strftime(DATETIME_FORMAT),
+            "shutdown": self.shutdown
+            if self.shutdown == STILL_RUNNING
+            else self.shutdown.strftime(DATETIME_FORMAT),
             "pids": self.pids,
             "exe": self.exe,
             "uid": self.exe + self.startup.strftime(DATETIME_FORMAT),
