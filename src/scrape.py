@@ -1,9 +1,6 @@
 import datetime
 import json
-import os
 import psutil
-import re
-import time
 from pathlib import Path
 from categories import classify
 
@@ -11,18 +8,20 @@ BASE_DIR = Path.cwd().parent
 
 
 def proc_runtime(ts):
-    return datetime.datetime.now() - datetime.datetime.fromtimestamp(ts)  # .strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now() - datetime.datetime.fromtimestamp(
+        ts
+    )  # .strftime("%Y-%m-%d %H:%M:%S")
 
 
 def ctime(proc: psutil.Process):
     return datetime.datetime.fromtimestamp(proc.create_time())
 
 
-STILL_RUNNING = 'running'
-STOPPED = 'stopped'
+STILL_RUNNING = "running"
+STOPPED = "stopped"
+
 
 class Application:
-
     def __init__(self, name, pids, exe, startup, shutdown) -> None:
         self.name = name
         self.pids = pids
@@ -31,35 +30,37 @@ class Application:
         if isinstance(startup, datetime.datetime):
             self.startup = startup
         else:
-            self.startup = datetime.datetime.strptime(startup, "%Y-%m-%d %H:%M:%S")
-        
-        if self._pids_alive():  # first check if PIDS are running (primary source)
+            self.startup = datetime.datetime.strptime(
+                startup, "%Y-%m-%d %H:%M:%S"
+            )
+
+        if (
+            self._pids_alive()
+        ):  # first check if PIDS are running (primary source)
             self.shutdown = STILL_RUNNING
         else:
             try:  # if not running, see if passed `shutdown` is parsable
-                self.shutdown = datetime.datetime.strptime(shutdown, "%Y-%m-%d %H:%M:%S")
+                self.shutdown = datetime.datetime.strptime(
+                    shutdown, "%Y-%m-%d %H:%M:%S"
+                )
             except ValueError:  # otherwise, use current time as shutdown time
                 self.shutdown = datetime.datetime.now()
-            # finally:
-            #     self.shutdown = self.shutdown.strftime("%Y-%m-%d %H:%M:%S")
-
-        # if shutdown is None:
-        #     self.shutdown = STILL_RUNNING if self._pids_alive() else datetime.datetime.now()
-        # elif shutdown == STILL_RUNNING:
-        #     pass
-        # else:
-        #     self.shutdown = datetime.datetime.strptime(shutdown, "%Y-%m-%d %H:%M:%S")
 
         self.category = classify(self.exe)
 
     @classmethod
     def from_process(cls, proc: psutil.Process, assume_running=True):
         if assume_running:
-            return cls(proc.name(), [proc.pid], proc.exe(), ctime(proc), STILL_RUNNING)
+            return cls(
+                proc.name(), [proc.pid], proc.exe(), ctime(proc), STILL_RUNNING
+            )
         else:
-            shutdown = STILL_RUNNING if proc.is_running() else datetime.datetime.now()
-            return cls(proc.name(), [proc.pid], proc.exe(), ctime(proc), shutdown)
-
+            shutdown = (
+                STILL_RUNNING if proc.is_running() else datetime.datetime.now()
+            )
+            return cls(
+                proc.name(), [proc.pid], proc.exe(), ctime(proc), shutdown
+            )
 
     def add(self, proc: psutil.Process):
         assert self.shutdown == STILL_RUNNING
@@ -69,10 +70,12 @@ class Application:
         else:
             self.pids.append(proc.pid)
             self.startup = min(self.startup, ctime(proc))
-    
+
     def wall_time(self):
-        return (datetime.datetime.now() if self.is_alive() else self.shutdown) - self.startup
-    
+        return (
+            datetime.datetime.now() if self.is_alive() else self.shutdown
+        ) - self.startup
+
     def _pids_alive(self):
         pids_statuses = []
         for pid in self.pids:
@@ -82,60 +85,75 @@ class Application:
             except psutil.NoSuchProcess:
                 pids_statuses.append(False)
         return any(pids_statuses)
-                
+
     def is_alive(self):
-        '''
-        Check if self.shutdown has been set yet, otherwise, check all cached processes for run status
-        '''
+        """
+        Check if self.shutdown has been set yet,
+        otherwise, check all cached processes for run status
+        """
         if self.shutdown == STILL_RUNNING and not self._pids_alive():
             self.shutdown = datetime.datetime.now()
         return self.shutdown == STILL_RUNNING
 
     def serialize(self):
         return {
-            'name': self.name,
-            'pids': self.pids,
-            'exe': self.exe,
-            'startup': self.startup.strftime("%Y-%m-%d %H:%M:%S"),
-            'shutdown': (datetime.datetime.now() if self.shutdown == STILL_RUNNING else self.shutdown).strftime("%Y-%m-%d %H:%M:%S"),
+            "name": self.name,
+            "pids": self.pids,
+            "exe": self.exe,
+            "startup": self.startup.strftime("%Y-%m-%d %H:%M:%S"),
+            "shutdown": (
+                datetime.datetime.now()
+                if self.shutdown == STILL_RUNNING
+                else self.shutdown
+            ).strftime("%Y-%m-%d %H:%M:%S"),
         }
 
     @classmethod
     def deserialize(cls, data):
-        app = cls(data['name'], data['pids'], data['exe'], data['startup'], data['shutdown'])
+        app = cls(
+            data["name"],
+            data["pids"],
+            data["exe"],
+            data["startup"],
+            data["shutdown"],
+        )
         return app
 
     def save(self, save_path):
-        with open(save_path, 'w') as f:
+        with open(save_path, "w") as f:
             json.dump(self.serialize(), f)
 
-    @classmethod    
+    @classmethod
     def load(cls, load_path):
-        with open(load_path, 'r') as f:
+        with open(load_path, "r") as f:
             return cls.deserialize(json.load(f))
-    
+
     def __hash__(self) -> int:
         return hash(tuple(self.pids))
-    
+
     def __eq__(self, o: object) -> bool:
         return self.__hash__() == o.__hash__()
 
     def _pids_str(self, max_pids=5):
         if len(self.pids) > max_pids:
-            return ' '.join(str(_) for _ in self.pids[:max_pids]) + '...'
+            return " ".join(str(_) for _ in self.pids[:max_pids]) + "..."
         else:
-            return ' '.join(str(_) for _ in self.pids)
+            return " ".join(str(_) for _ in self.pids)
 
     def __str__(self) -> str:
-        # return '[%s] %s started at %s (runtime: %s) (%d pids: %s)' % (self.category, self.name, self.startup.strftime("%Y-%m-%d %H:%M:%S"), str(self.wall_time()).split('.')[0], len(self.pids), self._pids_str())
-        return f'[{self.category}] {self.name} ({STILL_RUNNING if self.shutdown == STILL_RUNNING else STOPPED}) started at {self.startup.strftime("%Y-%m-%d %H:%M:%S")} (runtime: {str(self.wall_time()).split(".")[0]}) ({len(self.pids)} pids: {self._pids_str()})'
+        s = f"[{self.category}] "
+        s += f"{self.name} ("
+        s += STILL_RUNNING if self.shutdown == STILL_RUNNING else STOPPED
+        s += f') started at {self.startup.strftime("%Y-%m-%d %H:%M:%S")} '
+        s += f'(runtime: {str(self.wall_time()).split(".")[0]}) '
+        s += f"({len(self.pids)} pids: {self._pids_str()})"
+        return s
 
     def __repr__(self) -> str:
         return str(self)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     applications = {}
 
@@ -149,11 +167,11 @@ if __name__ == '__main__':
                 applications[name].add(proc)
         except psutil.AccessDenied as e:
             print(e)
-    
-    app = applications['Code.exe']
-    save_path = BASE_DIR / 'logs' / 'code_exe.json'
+
+    # app = applications['Code.exe']
+    # save_path = BASE_DIR / 'logs' / 'code_exe.json'
     # app.save(save_path)
-    loaded_app = Application.load(save_path)
-    print(app == loaded_app)
-    print(app)
-    print(loaded_app)
+    # loaded_app = Application.load(save_path)
+    # print(app == loaded_app)
+    # print(app)
+    # print(loaded_app)
