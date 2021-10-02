@@ -28,11 +28,10 @@ def create_table(db_con, table_name, columns, unique_columns):
     )
 
 
-if __name__ == "__main__":
+def scrape(exclude_other=True):
 
     # SCRAPE
     applications = {}
-    exclude_other = True
     for proc in psutil.process_iter():
         try:
             name = proc.name()
@@ -50,12 +49,8 @@ if __name__ == "__main__":
     db_path = (
         Path.cwd().parent.parent
         / "data"
-        / ("apps-on-%s_3.db" % daystamp.strftime(DATE_FORMAT))
+        / ("apps-on-%s.db" % daystamp.strftime(DATE_FORMAT))
     )
-
-    DEBUG_DB = True
-    if DEBUG_DB:
-        db_path.unlink(missing_ok=True)
 
     con = sqlite3.connect(db_path)
 
@@ -68,7 +63,6 @@ if __name__ == "__main__":
     exe = "exe"
     uid = "uid"
     walltime = "walltime"
-    total_walltime = "'total walltime'"
 
     # UPDATE APPLICATION DATA
     application_table = "Applications"
@@ -117,25 +111,3 @@ if __name__ == "__main__":
         """
     )
     con.commit()
-
-    # UPDATE SUMMARY TABLE
-    # summary_table = "Summary"
-    # sum_columns = [category, total_walltime]
-    # unique_sum_columns = [f"{category} TEXT"]
-    # create_table(con, summary_table, sum_columns, unique_sum_columns)
-
-    # # perform summary
-    # con.cursor().execute(
-    #     f"""
-    #     insert or replace into {summary_table} ({category}, {total_walltime})
-    #     select
-    #     {category}, time(
-    #         sum(
-    #             strftime('%s', {walltime})
-    #             ), 'unixepoch') as {total_walltime}
-    #     from {aggregation_table}
-    #     group by {category}
-    #     order by {walltime} desc
-    #     """
-    # )
-    # con.commit()
