@@ -2,6 +2,7 @@ import datetime
 import json
 import psutil
 from .categories import categorize
+from .scheduling import DATETIME_FORMAT
 
 
 def proc_runtime(ts):
@@ -25,9 +26,7 @@ class Application:
         if isinstance(startup, datetime.datetime):
             self.startup = startup
         else:
-            self.startup = datetime.datetime.strptime(
-                startup, "%Y-%m-%d %H:%M:%S"
-            )
+            self.startup = datetime.datetime.strptime(startup, DATETIME_FORMAT)
 
         if (
             self._pids_alive()
@@ -36,7 +35,7 @@ class Application:
         else:
             try:  # if not running, see if passed `shutdown` is parsable
                 self.shutdown = datetime.datetime.strptime(
-                    shutdown, "%Y-%m-%d %H:%M:%S"
+                    shutdown, DATETIME_FORMAT
                 )
             except ValueError:  # otherwise, use current time as shutdown time
                 self.shutdown = datetime.datetime.now()
@@ -95,12 +94,12 @@ class Application:
             "name": self.name,
             "pids": self.pids,
             "exe": self.exe,
-            "startup": self.startup.strftime("%Y-%m-%d %H:%M:%S"),
+            "startup": self.startup.strftime(DATETIME_FORMAT),
             "shutdown": (
                 datetime.datetime.now()
                 if self.shutdown == STILL_RUNNING
                 else self.shutdown
-            ).strftime("%Y-%m-%d %H:%M:%S"),
+            ).strftime(DATETIME_FORMAT),
         }
 
     @classmethod
@@ -124,7 +123,10 @@ class Application:
             return cls.deserialize(json.load(f))
 
     def __hash__(self) -> int:
-        return hash(tuple(self.pids))
+        # return hash(tuple(self.pids))
+        # # if two of the same applications run at the same time, \
+        # the pids will differ --> hash exe and startup instead
+        return hash(self.exe) + hash(self.startup)
 
     def __eq__(self, o: object) -> bool:
         return self.__hash__() == o.__hash__()
@@ -139,8 +141,8 @@ class Application:
         s = f"[{self.category}] "
         s += f"{self.name} ("
         s += STILL_RUNNING if self.shutdown == STILL_RUNNING else STOPPED
-        s += f') started at {self.startup.strftime("%Y-%m-%d %H:%M:%S")} '
-        s += f'(runtime: {str(self.wall_time()).split(".")[0]}) '
+        s += f") started at {self.startup.strftime(DATETIME_FORMAT)} "
+        s += f"(runtime: {str(self.wall_time()).split('.')[0]}) "
         s += f"({len(self.pids)} pids: {self._pids_str()})"
         return s
 
