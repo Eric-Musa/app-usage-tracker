@@ -114,6 +114,9 @@ class Application:
             self.shutdown = datetime.datetime.now()
         return self.shutdown == STILL_RUNNING
 
+    def as_db_record(self):
+        return tuple(str(_) for _ in self.serialize().values())
+
     def serialize(self):
         return {
             "name": self.name,
@@ -125,6 +128,7 @@ class Application:
                 if self.shutdown == STILL_RUNNING
                 else self.shutdown
             ).strftime(DATETIME_FORMAT),
+            "uid": self.exe + self.startup.strftime(DATETIME_FORMAT),
         }
 
     @classmethod
@@ -136,6 +140,7 @@ class Application:
             data["startup"],
             data["shutdown"],
         )
+        assert (app.exe + app.startup.strftime(DATETIME_FORMAT)) == data["uid"]
         return app
 
     def save_to_json(self, save_path):

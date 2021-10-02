@@ -5,7 +5,7 @@ DATE_FORMAT = "%Y-%m-%d"
 TIME_FORMAT = "%H:%M:%S"
 DATETIME_FORMAT = "%s %s" % (DATE_FORMAT, TIME_FORMAT)
 
-DAYSTAMP_HOUR_CUTOFF = 3  # 3 AM cutoff
+DAYSTAMP_HOUR_CUTOFF = 5  # 5 AM cutoff
 
 
 def get_daystamp(cutoff=DAYSTAMP_HOUR_CUTOFF):
