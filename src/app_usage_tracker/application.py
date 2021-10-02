@@ -1,16 +1,11 @@
 import datetime
 import json
 import psutil
-from pathlib import Path
-from categories import classify
-
-BASE_DIR = Path.cwd().parent
+from .categories import categorize
 
 
 def proc_runtime(ts):
-    return datetime.datetime.now() - datetime.datetime.fromtimestamp(
-        ts
-    )  # .strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now() - datetime.datetime.fromtimestamp(ts)
 
 
 def ctime(proc: psutil.Process):
@@ -46,7 +41,7 @@ class Application:
             except ValueError:  # otherwise, use current time as shutdown time
                 self.shutdown = datetime.datetime.now()
 
-        self.category = classify(self.exe)
+        self.category = categorize(self.exe)
 
     @classmethod
     def from_process(cls, proc: psutil.Process, assume_running=True):
@@ -119,12 +114,12 @@ class Application:
         )
         return app
 
-    def save(self, save_path):
+    def save_to_json(self, save_path):
         with open(save_path, "w") as f:
             json.dump(self.serialize(), f)
 
     @classmethod
-    def load(cls, load_path):
+    def load_from_json(cls, load_path):
         with open(load_path, "r") as f:
             return cls.deserialize(json.load(f))
 
@@ -151,27 +146,3 @@ class Application:
 
     def __repr__(self) -> str:
         return str(self)
-
-
-if __name__ == "__main__":
-
-    applications = {}
-
-    for proc in psutil.process_iter():
-        try:
-            pid = proc.pid
-            name = proc.name()
-            if name not in applications:
-                applications[name] = Application.from_process(proc)
-            else:
-                applications[name].add(proc)
-        except psutil.AccessDenied as e:
-            print(e)
-
-    # app = applications['Code.exe']
-    # save_path = BASE_DIR / 'logs' / 'code_exe.json'
-    # app.save(save_path)
-    # loaded_app = Application.load(save_path)
-    # print(app == loaded_app)
-    # print(app)
-    # print(loaded_app)
