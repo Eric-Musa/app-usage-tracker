@@ -3,29 +3,12 @@ import json
 import psutil
 
 # import random
-from categories import categorize
-from scheduling import DATETIME_FORMAT
+from .categories import categorize
+from .scheduling import DATETIME_FORMAT
 
 
 def trim_datetime(dt):
     return dt - datetime.timedelta(microseconds=dt.microsecond)
-
-
-# def bad_hash(a, b):
-#     random.seed(a)
-#     r1 = str(random.random())[:8]
-#     random.seed(b)
-#     r2 = str(random.random())[:8]
-#     return int(''.join(r1.split('.') + r2.split('.')))
-
-
-# def bad_hash(*seeds):
-#     max_sample = int(16 / len(seeds))
-#     hash = ''
-#     for seed in seeds:
-#         random.seed(seed)
-#         hash += str(random.random()).split('.')[1][:max_sample]
-#     return int(hash)
 
 
 def ctime(proc: psutil.Process):
@@ -33,8 +16,6 @@ def ctime(proc: psutil.Process):
     convert `Process` create_timestamp to datetime, ignoring microseconds
     """
     return trim_datetime(datetime.datetime.fromtimestamp(proc.create_time()))
-    # startup = datetime.datetime.fromtimestamp(proc.create_time())
-    # return startup - datetime.timedelta(microseconds=startup.microsecond)
 
 
 STILL_RUNNING = "running"

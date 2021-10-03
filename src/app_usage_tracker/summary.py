@@ -1,18 +1,24 @@
+from operator import attrgetter
+from pathlib import Path
 import psutil
 import sqlite3
-from pathlib import Path
-from application import Application, STILL_RUNNING
-from operator import attrgetter
-from categories import (
+from .application import Application, STILL_RUNNING
+from .categories import (
     categorize,
     OTHER,
 )
-from scheduling import (
-    get_daystamp,
+from .scheduling import (
+    get_daystamp_and_cutoff_datetime,
     DATE_FORMAT,
 )
 
-# from app_usage_tracker.application import bad_hash
+
+def get_db_path(daystamp):
+    return (
+        Path.cwd().parent
+        / "data"
+        / ("apps-on-%s.db" % daystamp.strftime(DATE_FORMAT))
+    )
 
 
 def create_table(db_con, table_name, columns, unique_columns):
@@ -45,12 +51,10 @@ def scrape(db_path=None, exclude_other=True):
         except psutil.AccessDenied as e:
             print(e)
 
+    daystamp, _ = get_daystamp_and_cutoff_datetime()
+
     # CONNECT TO DB
-    db_path = db_path or (
-        Path.cwd().parent.parent
-        / "data"
-        / ("apps-on-%s.db" % get_daystamp().strftime(DATE_FORMAT))
-    )
+    db_path = db_path or get_db_path(daystamp)
     con = sqlite3.connect(db_path)
 
     # DEFINE COLUMN NAMES
@@ -131,18 +135,32 @@ def scrape(db_path=None, exclude_other=True):
     )
     con.commit()
 
+    return (
+        db_path,
+        con.cursor()
+        .execute(
+            f"""select {name}, {category}, {walltime} \
+                from {aggregation_table}"""
+        )
+        .fetchall(),
+    )
+
 
 if __name__ == "__main__":
 
-    db_path = (
-        Path.cwd().parent.parent
-        / "data"
-        / ("apps-on-%s_debug2.db" % get_daystamp().strftime(DATE_FORMAT))
-    )
+    daystamp, _ = get_daystamp_and_cutoff_datetime()
+
     debug = False
     if debug:
-        print("deleting", db_path)
-        db_path.unlink(missing_ok=True)
+        db_path = (
+            Path.cwd().parent.parent
+            / "data"
+            / ("apps-on-%s_debug2.db" % daystamp.strftime(DATE_FORMAT))
+        )
+        clean_db = False
+        if clean_db:
+            print("deleting", db_path)
+            db_path.unlink(missing_ok=True)
 
     print("scraping")
     scrape(db_path)
