@@ -1,6 +1,6 @@
 data/
 src/local/
-src/output.txt
+**/output.txt
 *.db
 
 # Ignore user-specific categorized processes

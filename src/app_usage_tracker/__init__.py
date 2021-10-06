@@ -1,4 +1,4 @@
-from .summary import scrape
+from .summary import scrape, get_db_path
 from .application import Application, STILL_RUNNING, STOPPED
 from .categories import (
     categorize,
@@ -25,6 +25,7 @@ from .archive import (
 
 __all__ = [
     "scrape",
+    "get_db_path",
     "Application",
     "STILL_RUNNING",
     "STOPPED",

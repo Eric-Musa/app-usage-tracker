@@ -1,9 +1,14 @@
+import os
 from pathlib import Path
 import sqlite3
 from .scheduling import DATE_FORMAT
 from .summary import create_table, get_db_path
 
-ARCHIVE_LOG_PATH = Path.cwd().parent / "data" / "archive_log.db"
+ARCHIVE_LOG_PATH = (
+    Path(os.path.abspath(__file__)).parent.parent.parent
+    / "data"
+    / "archive_log.db"
+)
 ARCHIVE_LOG_TABLE = "ArchiveLog"
 
 

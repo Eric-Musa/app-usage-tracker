@@ -1,23 +1,26 @@
-import sqlite3
-from app_usage_tracker.scheduling import DAYSTAMP_HOUR_CUTOFF, SCRAPE_INTERVAL
-from app_usage_tracker.summary import get_db_path
-
-
 FROM_EMAIL = "eric.musa.app.usage.tracker@gmail.com"
 TO_EMAIL = "eric.musa17@gmail.com"
 
 
 if __name__ == "__main__":
-    import datetime
     import os
+    import sqlite3
+    import datetime
     from app_usage_tracker import (
         scrape,
         get_daystamp_and_cutoff_datetime,
+        DAYSTAMP_HOUR_CUTOFF,
+        SCRAPE_INTERVAL,
+        get_db_path,
         send_summary_email,
         archive_db,
         ARCHIVE_LOG_PATH,
         exists_and_is_archived,
     )
+
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
 
     cutoff_hour = DAYSTAMP_HOUR_CUTOFF
     interval_minutes = SCRAPE_INTERVAL
