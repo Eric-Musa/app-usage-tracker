@@ -25,7 +25,7 @@ if __name__ == "__main__":
     to_email = TO_EMAIL
 
     daystamp, cutoff_datetime = get_daystamp_and_cutoff_datetime(cutoff_hour)
-
+    print(daystamp, cutoff_datetime)
     # Check previous day first
     prev_daystamp = daystamp - datetime.timedelta(days=1)
     exists, archived = exists_and_is_archived(prev_daystamp)
@@ -38,18 +38,21 @@ if __name__ == "__main__":
             .execute("select name, category, walltime from Aggregations")
             .fetchall()
         )
+        prev_con.close()
 
         prev_response = send_summary_email(
             prev_data,
             prev_daystamp,
-            prev_db_path,
             to_email,
             from_email,
-            from_email_pwd=os.environ["APP_USAGE_TRACKER_EMAIL_PWD"],
+            os.environ["APP_USAGE_TRACKER_EMAIL_PWD"],
         )
         archive_log_path = ARCHIVE_LOG_PATH
         archive_db(
-            prev_daystamp, prev_response, archive_log_path=archive_log_path
+            prev_db_path,
+            prev_daystamp,
+            prev_response,
+            archive_log_path=archive_log_path,
         )
 
     db_path, data = scrape()

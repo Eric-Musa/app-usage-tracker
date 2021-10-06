@@ -1,4 +1,3 @@
-import datetime
 from pathlib import Path
 import sqlite3
 from .scheduling import DATE_FORMAT
@@ -39,17 +38,12 @@ def archive_db(db_path, daystamp, response, archive_log_path=ARCHIVE_LOG_PATH):
 def exists_and_is_archived(
     daystamp, db_path=None, archive_log_path=ARCHIVE_LOG_PATH
 ):
-    daystamp = (
-        daystamp.strftime(DATE_FORMAT)
-        if isinstance(daystamp, datetime.date)
-        else daystamp
-    )
     con = sqlite3.connect(archive_log_path)
     daystamp_matches = (
         con.cursor()
         .execute(
             f'''select daystamp from {ARCHIVE_LOG_TABLE}
-                where daystamp == "{daystamp}"'''
+                where daystamp == "{daystamp.strftime(DATE_FORMAT)}"'''
         )
         .fetchall()
     )
