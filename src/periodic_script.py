@@ -25,7 +25,7 @@ if __name__ == "__main__":
     to_email = TO_EMAIL
 
     daystamp, cutoff_datetime = get_daystamp_and_cutoff_datetime(cutoff_hour)
-    print(daystamp, cutoff_datetime)
+    print(datetime.datetime.now())
     # Check previous day first
     prev_daystamp = daystamp - datetime.timedelta(days=1)
     exists, archived = exists_and_is_archived(prev_daystamp)
@@ -56,6 +56,7 @@ if __name__ == "__main__":
         )
 
     db_path, data = scrape()
+    print(data)
     # If the next scheduled scrape is past the cutoff time,
     # send an aggregation email after this scrape
     if (
