@@ -1,91 +1,74 @@
+import sqlite3
+from app_usage_tracker.scheduling import DAYSTAMP_HOUR_CUTOFF, SCRAPE_INTERVAL
+from app_usage_tracker.summary import get_db_path
+
+
 FROM_EMAIL = "eric.musa.app.usage.tracker@gmail.com"
 TO_EMAIL = "eric.musa17@gmail.com"
 
 
 if __name__ == "__main__":
     import datetime
-    from email.message import EmailMessage
-    import logging
     import os
-    from pathlib import Path
-    import platform
-    import shutil
-    import smtplib
     from app_usage_tracker import (
         scrape,
         get_daystamp_and_cutoff_datetime,
-        DATE_FORMAT,
-        DAYSTAMP_HOUR_CUTOFF,
-        SCRAPE_INTERVAL,
+        send_summary_email,
+        archive_db,
+        ARCHIVE_LOG_PATH,
+        exists_and_is_archived,
     )
-
-    db_path, data = scrape()
-    longest_app_name = max(len(_[0]) for _ in data)
-    longest_cat_name = max(len(_[1]) for _ in data)
-    # scrape_data_message = '\n'.join([f'{name.center(longest_app_name)} \
-    # {("["+category+"]").center(longest_cat_name+2)}: {walltime}' \
-    # for name, category, walltime in data])
-    scrape_data_message = "\n".join(["%s [%s]: %s" % _ for _ in data])
-    print(scrape_data_message)
-
-    # cutoff = 11  # 2:00pm
-    # interval = 15
-    # daystamp, cutoff_datetime = \
-    # get_daystamp_and_cutoff_datetime(cutoff=cutoff)
-    # print(cutoff, interval, daystamp, cutoff_datetime, \
-    # datetime.datetime.now() + \
-    # datetime.timedelta(minutes=interval) >= cutoff_datetime)
-
-    # cutoff = 15  # 2:00pm
-    # interval = 5
-    # daystamp, cutoff_datetime = \
-    # get_daystamp_and_cutoff_datetime(cutoff=cutoff)
-    # print(cutoff, interval, daystamp, cutoff_datetime, \
-    # datetime.datetime.now() + \
-    # datetime.timedelta(minutes=interval) >= cutoff_datetime)
-
-    # cutoff = 15  # 2:00pm
-    # interval = 15
-    # daystamp, cutoff_datetime = \
-    # get_daystamp_and_cutoff_datetime(cutoff=cutoff)
-    # print(cutoff, interval, daystamp, cutoff_datetime, \
-    # datetime.datetime.now() + \
-    # datetime.timedelta(minutes=interval) >= cutoff_datetime)
-
-    # exit()
 
     cutoff_hour = DAYSTAMP_HOUR_CUTOFF
     interval_minutes = SCRAPE_INTERVAL
+    from_email = FROM_EMAIL
+    to_email = TO_EMAIL
 
     daystamp, cutoff_datetime = get_daystamp_and_cutoff_datetime(cutoff_hour)
 
+    # Check previous day first
+    prev_daystamp = daystamp - datetime.timedelta(days=1)
+    exists, archived = exists_and_is_archived(prev_daystamp)
+    if exists and not archived:
+        print("Sending notification with app usage from previous day")
+        prev_db_path = get_db_path(prev_daystamp)
+        prev_con = sqlite3.connect(prev_db_path)
+        prev_data = (
+            prev_con.cursor()
+            .execute("select name, category, walltime from Aggregations")
+            .fetchall()
+        )
+
+        prev_response = send_summary_email(
+            prev_data,
+            prev_daystamp,
+            prev_db_path,
+            to_email,
+            from_email,
+            from_email_pwd=os.environ["APP_USAGE_TRACKER_EMAIL_PWD"],
+        )
+        archive_log_path = ARCHIVE_LOG_PATH
+        archive_db(
+            prev_daystamp, prev_response, archive_log_path=archive_log_path
+        )
+
+    db_path, data = scrape()
     # If the next scheduled scrape is past the cutoff time,
     # send an aggregation email after this scrape
     if (
         datetime.datetime.now() + datetime.timedelta(minutes=interval_minutes)
     ) >= cutoff_datetime:
         print("Sending notification with app usage")
-        msg = EmailMessage()
-        msg[
-            "Subject"
-        ] = f"App Usage on {platform.node()} for \
-            {daystamp.strftime(DATE_FORMAT)}"
-        msg["From"] = FROM_EMAIL
-        msg["To"] = TO_EMAIL
-        msg.set_content(scrape_data_message)
+        response = send_summary_email(
+            data,
+            daystamp,
+            db_path,
+            to_email,
+            from_email,
+            from_email_pwd=os.environ["APP_USAGE_TRACKER_EMAIL_PWD"],
+        )
 
-        s = smtplib.SMTP("smtp.gmail.com:587")
-        s.ehlo()
-        s.starttls()
-        s.login(FROM_EMAIL, os.environ["APP_USAGE_TRACKER_EMAIL_PWD"])
-
-        response = s.send_message(msg)
-        if response:
-            logging.warn(
-                "SMTP email response returned the following: " + str(response)
-            )
-
-        s.quit()
-        print("archiving database")
-        archive_db_path = Path(str(db_path.stem).replace(".db", "_archive.db"))
-        shutil.move(db_path, archive_db_path)
+        archive_log_path = ARCHIVE_LOG_PATH
+        archive_db(
+            db_path, daystamp, response, archive_log_path=archive_log_path
+        )

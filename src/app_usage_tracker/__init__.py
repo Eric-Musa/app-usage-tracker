@@ -16,6 +16,12 @@ from .scheduling import (
     DAYSTAMP_HOUR_CUTOFF,
     SCRAPE_INTERVAL,
 )
+from .notify import send_summary_email
+from .archive import (
+    ARCHIVE_LOG_PATH,
+    archive_db,
+    exists_and_is_archived,
+)
 
 __all__ = [
     "scrape",
@@ -34,4 +40,8 @@ __all__ = [
     "DATETIME_FORMAT",
     "DAYSTAMP_HOUR_CUTOFF",
     "SCRAPE_INTERVAL",
+    "send_summary_email",
+    "ARCHIVE_LOG_PATH",
+    "archive_db",
+    "exists_and_is_archived",
 ]

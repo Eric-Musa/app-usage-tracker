@@ -123,8 +123,8 @@ def scrape(db_path=None, exclude_other=True):
         select
         {name}, {category}, time(
             sum(
-                (strftime('%s', (case when {shutdown} == '{STILL_RUNNING}' \
-                    then datetime('now', 'localtime') else {shutdown} end)) \
+                (strftime('%s', (case when {shutdown} == '{STILL_RUNNING}'
+                    then datetime('now', 'localtime') else {shutdown} end))
                         - strftime('%s', {startup}))
             ), 'unixepoch'
         ) as "{walltime}"
@@ -139,7 +139,7 @@ def scrape(db_path=None, exclude_other=True):
         db_path,
         con.cursor()
         .execute(
-            f"""select {name}, {category}, {walltime} \
+            f"""select {name}, {category}, {walltime}
                 from {aggregation_table}"""
         )
         .fetchall(),
