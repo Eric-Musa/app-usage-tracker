@@ -20,6 +20,7 @@
 
 ### Future work:
  - assemble variable options into a single config file for user customization
+ - implement a weekly summary of app usage
  - support for usage-tracking on *nix machines
 
 ---
