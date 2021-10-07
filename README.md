@@ -12,7 +12,7 @@
 5. `VBScript` to run the usage-tracking program without a console window
 
 ---
-![Screenshot of app usage summary email notification](gmail_notif_screenshot.png)
+![Screenshot of app usage summary email notification](https://github.com/Eric-Musa/app-usage-tracker/blob/main/gmail_notif_screenshot.PNG)
 
 \*My desktop's name is "Bricktop" haha
 
